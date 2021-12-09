@@ -1,0 +1,10 @@
+*.csv
+brownie-build/
+scripts/
+.clj-kondo/
+.lsp/
+__pycache__
+.history
+.hypothesis/
+build/
+reports/
