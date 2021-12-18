@@ -45,10 +45,9 @@ contract MarketPool is Ownable {
     // number of people who invested
     uint256 public numInvested = 0;
 
-    uint256[] public amountSteps;
-    uint256[] public priceSteps;
-    // counting the steps of tranches
-    uint256 public currentStep;
+    //TODO slope
+    uint256 public firstPrice;
+    uint256 public slope;
     
     uint256 public currentPrice;
     
@@ -71,8 +70,8 @@ contract MarketPool is Ownable {
         uint256 _epochTime,        
         uint256 _totalraiseCap,
         uint256 _minInvest,
-        uint256[] memory _amountSteps,
-        uint256[] memory _priceSteps,
+        uint256 _firstPrice,
+        uint256 _slope,
         address _treasury
     ) {
         investToken = _investToken;
@@ -88,9 +87,8 @@ contract MarketPool is Ownable {
         nrt = new NRT("aMAG", 9);
         redeemEnabled = false;
         saleEnabled = false;
-        amountSteps = _amountSteps;
-        priceSteps = _priceSteps;
-        currentPrice = priceSteps[0];
+        firstPrice = _firstPrice;
+        slope = _slope;
         currentStep = 0;
     }
     
@@ -114,6 +112,8 @@ contract MarketPool is Ownable {
         );
 
         //MAG decimals = 9, MIM decimals = 18
+        //currentPrice = firstPrice + slope * invested/total; 
+        
         uint256 issueAmount = investAmount * priceQuote / (currentPrice * 10 ** launchDecimals);
 
         nrt.issue(msg.sender, issueAmount);
@@ -125,10 +125,10 @@ contract MarketPool is Ownable {
         }
         investor.amountInvested += investAmount;
 
-        if (totalraised >= amountSteps[currentStep]) {
-            currentStep++;
-            currentPrice = priceSteps[currentStep];
-        }
+        // if (totalraised >= amountSteps[currentStep]) {
+        //     currentStep++;
+        //     currentPrice = priceSteps[currentStep];
+        // }
         
         emit Invest(msg.sender, investAmount);
     }
