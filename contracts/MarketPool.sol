@@ -114,9 +114,7 @@ contract MarketPool is Ownable {
             "transfer failed"
         );
 
-        //MAG decimals = 9, MIM decimals = 18
-        currentPrice = firstPrice + slope * totaldeposited/totalraiseCap; 
-        
+        //MAG decimals = 9, MIM decimals = 18        
         
         totaldeposited += investAmount;
         if (investor.amountInvested == 0){
@@ -128,14 +126,22 @@ contract MarketPool is Ownable {
         emit Invest(msg.sender, investAmount);
     }
 
-    //TODO
+    //TODO    
     function withdraw(uint256 investAmount) public {
 
         //         //Two checks of funds to prevent over widrawal
         //         require(amountToRemove <= investor.totalInvested, "Cannot Remove more than invested");
         //         require(investor.totalInvested - amountToRemove >= 0, "Cannot Remove more than invested");
-        //         //Make sure they can't withdraw too often.
-        //         require(block.timestamp > investor.lastRemovalTime + investRemovalDelay, "Removing investment too often");
+
+        // require(block.timestamp < launchEndTime, "Sale and Grace period has ended");
+
+        //Make sure they can't withdraw too often.
+        //require(block.timestamp > investor.lastRemovalTime + investRemovalDelay, "Removing investment too often");  
+
+        InvestorInfo storage investor = investorInfoMap[msg.sender];
+        require( ERC20(investToken).transfer(address(this),investor.amountInvested),
+            "transfer failed"
+        );
     }
 
     //TODO
@@ -147,12 +153,11 @@ contract MarketPool is Ownable {
 
         InvestorInfo storage investor = investorInfoMap[msg.sender];
 
-        uint256 issueAmount = investAmount * priceQuote / (currentPrice * 10 ** launchDecimalsDif);        
+        uint256 issueAmount = investor.amountInvested * priceQuote / (price * 10 ** launchDecimalsDif);
         require(totalissued + issueAmount <= totalissueCap, "over total issue cap");
 
         nrt.issue(msg.sender, issueAmount);
         totalissued += issueAmount;
-
 
         //         require(saleEnabled, "Sale is not enabled yet");
         //         require(block.timestamp >= launchStartTime, "Sale is not enabled yet");
@@ -163,6 +168,7 @@ contract MarketPool is Ownable {
 
     //TODO
     function FinalPrice() public view returns (uint256) {
+        return firstPrice + slope * totaldeposited/totalraiseCap;
         //return startingPrice + (totaldeposited / 10 ** investableDecimals) / maxDeposit; 
     }
 
