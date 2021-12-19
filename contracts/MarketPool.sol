@@ -20,10 +20,12 @@ contract MarketPool is Ownable {
     address public treasury;
     // the certificate
     NRT public nrt;
-    // the total amount in stables to be raised
+    // the total amount in stables to be issued
+    uint256 public totalissueCap;
+    // the total amount in stables to be issued
     uint256 public totalraiseCap;
     // how much was raised
-    uint256 public totalraised;
+    uint256 public totaldeposited;
     // how much was issued
     uint256 public totalissued;
     // how much was redeemed
@@ -65,20 +67,22 @@ contract MarketPool is Ownable {
     
     constructor(
         address _investToken,
-        uint256 _startTime,  
-        uint256 _duration,  
-        uint256 _epochTime,        
+        uint256 _startTime,
+        uint256 _duration, 
+        uint256 _epochTime,    
+        uint256 _totalissueCap,
         uint256 _totalraiseCap,
         uint256 _minInvest,
         uint256 _firstPrice,
         uint256 _slope,
         address _treasury
     ) {
+        //TODO
+        
         investToken = _investToken;
         startTime = _startTime;
         duration = _duration;
-        epochTime = _epochTime;
-        initialCap = _initialCap;        
+        totalissueCap = _totalissueCap;
         totalraiseCap = _totalraiseCap;
         mininvest = _minInvest; 
         treasury = _treasury;
@@ -89,15 +93,13 @@ contract MarketPool is Ownable {
         saleEnabled = false;
         firstPrice = _firstPrice;
         slope = _slope;
-        currentStep = 0;
     }
     
     
     // invest up to current cap
-    function invest(uint256 investAmount) public {
+    function deposit(uint256 investAmount) public {
         require(block.timestamp >= startTime, "not started yet");
-        require(saleEnabled, "not enabled yet");
-        require(totalraised + investAmount <= totalraiseCap, "over total raise");
+        require(saleEnabled, "not enabled yet");        
         require(investAmount >= mininvest, "below minimum invest");
 
         InvestorInfo storage investor = investorInfoMap[msg.sender];
@@ -112,25 +114,48 @@ contract MarketPool is Ownable {
         );
 
         //MAG decimals = 9, MIM decimals = 18
-        //currentPrice = firstPrice + slope * invested/total; 
-        
+        currentPrice = firstPrice + slope * totaldeposited/totalraiseCap; 
+        uint256 priceQuote = 100;
         uint256 issueAmount = investAmount * priceQuote / (currentPrice * 10 ** launchDecimals);
+        //require(total + investAmount <= totalraiseCap, "over total raise");
+        require(totalissued + issueAmount <= totalissueCap, "over total issue cap");
 
         nrt.issue(msg.sender, issueAmount);
 
-        totalraised += investAmount;
+        totaldeposited += investAmount;
         totalissued += issueAmount;
         if (investor.amountInvested == 0){
             numInvested += 1;
         }
         investor.amountInvested += investAmount;
 
-        // if (totalraised >= amountSteps[currentStep]) {
-        //     currentStep++;
-        //     currentPrice = priceSteps[currentStep];
-        // }
-        
+       
         emit Invest(msg.sender, investAmount);
+    }
+
+    //TODO
+    function withdraw(uint256 investAmount) public {
+
+        //         //Two checks of funds to prevent over widrawal
+        //         require(amountToRemove <= investor.totalInvested, "Cannot Remove more than invested");
+        //         require(investor.totalInvested - amountToRemove >= 0, "Cannot Remove more than invested");
+        //         //Make sure they can't withdraw too often.
+        //         require(block.timestamp > investor.lastRemovalTime + investRemovalDelay, "Removing investment too often");
+    }
+
+    //TODO
+    function finalize() public {
+
+        //         require(saleEnabled, "Sale is not enabled yet");
+        //         require(block.timestamp >= launchStartTime, "Sale is not enabled yet");
+        //         require(block.timestamp > launchEndTime, "Sale and Grace period has not ended");
+        //         require(block.timestamp >= claimTime, "Time to claim has not arrived");
+
+    }
+
+    //TODO
+    function CurrentPrice() public view returns (uint256) {
+        //return startingPrice + (totaldeposited / 10 ** investableDecimals) / maxDeposit; 
     }
 
     // redeem all tokens
