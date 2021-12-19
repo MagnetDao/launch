@@ -43,7 +43,7 @@ contract MarketPool is Ownable {
     // minimum amount
     uint256 public mininvest;
     // MAG decimals = 9, MIM decimals = 18
-    uint256 public launchDecimals = 9; 
+    uint256 public launchDecimalsDif = 9; 
     // number of people who invested
     uint256 public numInvested = 0;
 
@@ -93,6 +93,7 @@ contract MarketPool is Ownable {
         saleEnabled = false;
         firstPrice = _firstPrice;
         slope = _slope;
+        uint256 priceQuote = 100;
     }
     
     
@@ -115,15 +116,9 @@ contract MarketPool is Ownable {
 
         //MAG decimals = 9, MIM decimals = 18
         currentPrice = firstPrice + slope * totaldeposited/totalraiseCap; 
-        uint256 priceQuote = 100;
-        uint256 issueAmount = investAmount * priceQuote / (currentPrice * 10 ** launchDecimals);
-        //require(total + investAmount <= totalraiseCap, "over total raise");
-        require(totalissued + issueAmount <= totalissueCap, "over total issue cap");
-
-        nrt.issue(msg.sender, issueAmount);
-
+        
+        
         totaldeposited += investAmount;
-        totalissued += issueAmount;
         if (investor.amountInvested == 0){
             numInvested += 1;
         }
@@ -146,6 +141,19 @@ contract MarketPool is Ownable {
     //TODO
     function finalize() public {
 
+        // finalize price and 
+        // for all investors issue NRT
+        uint256 price = FinalPrice();
+
+        InvestorInfo storage investor = investorInfoMap[msg.sender];
+
+        uint256 issueAmount = investAmount * priceQuote / (currentPrice * 10 ** launchDecimalsDif);        
+        require(totalissued + issueAmount <= totalissueCap, "over total issue cap");
+
+        nrt.issue(msg.sender, issueAmount);
+        totalissued += issueAmount;
+
+
         //         require(saleEnabled, "Sale is not enabled yet");
         //         require(block.timestamp >= launchStartTime, "Sale is not enabled yet");
         //         require(block.timestamp > launchEndTime, "Sale and Grace period has not ended");
@@ -154,7 +162,7 @@ contract MarketPool is Ownable {
     }
 
     //TODO
-    function CurrentPrice() public view returns (uint256) {
+    function FinalPrice() public view returns (uint256) {
         //return startingPrice + (totaldeposited / 10 ** investableDecimals) / maxDeposit; 
     }
 
