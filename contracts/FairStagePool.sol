@@ -90,9 +90,9 @@ contract FairStagePool is Ownable {
         saleEnabled = false;
         //firstPrice = _firstPrice;
         //slope = _slope;
-        firstPrice = 80;
+        firstPrice = 8000;
         slope = 1;
-        priceQuote = 100;
+        priceQuote = 10000;
     }
     
     
@@ -180,10 +180,10 @@ contract FairStagePool is Ownable {
         
         //uint256 xprice = firstPrice + slope * totaldeposited / (maxissue * 10 ** 7);
         uint256 xprice = priceQuote * slope * totaldeposited / (maxissue * 10 ** 9);
-        if (xprice > 80){
+        if (xprice > 8000){
             return xprice;
         } else {
-            return 80;
+            return 8000;
         }
         //return startingPrice + (totaldeposited / 10 ** investableDecimals) / maxDeposit; 
     }
