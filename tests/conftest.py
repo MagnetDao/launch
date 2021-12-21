@@ -40,7 +40,7 @@ def launchpoolfair(FairLaunchPool, token, accounts):
     return FairLaunchPool.deploy(_investToken, _startTime, _duration, _epochTime, _cap, _totalraisecap, mini, _treasury, {"from": accounts[0]})
 
 @pytest.fixture(scope="module")
-def launchpoolstage(FairStagePool, token, accounts):
+def fairstagepool(FairStagePool, NRT, token, accounts):
     _investToken = token.address
     _startTime = chain.time()    
     _duration = 60*60*24*5
@@ -52,8 +52,11 @@ def launchpoolstage(FairStagePool, token, accounts):
     mini = 50 * 10 ** 18
     # price = 75
     # priceQuote = 100
+    _capInvestor = 50000 * f
 
-    return FairStagePool.deploy(_investToken, _startTime, _duration, _totalissue, mini, _treasury, {"from": accounts[0]})
+    _nrtAddress = NRT.deploy("aMAG", 9, {"from": accounts[0]}).address
+
+    return FairStagePool.deploy(_investToken, _nrtAddress, _startTime, _duration, _totalissue, mini, _capInvestor, _treasury, {"from": accounts[0]})
 
 
 # @pytest.fixture(scope="module")

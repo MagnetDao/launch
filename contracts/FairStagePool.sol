@@ -7,7 +7,7 @@ import "OpenZeppelin/openzeppelin-contracts@4.3.0/contracts/access/Ownable.sol";
 
 // *********************************
 // Fair Price Launch Contract, 2nd stage 
-// Every gets the same price in the end
+// Every contributor gets the same price in the end
 // Users can redeem a non-transferable token after the sale
 // *********************************
 
@@ -18,24 +18,30 @@ contract FairStagePool is Ownable {
     address public investToken;
     // the token to be launched
     address public launchToken;
-    // proceeds go to treasury
+    // proceeds go to treasury, multisig
     address public treasury;
     // the certificate
     NRT public nrt;
-    // the total amount in stables to be issued
-    uint256 public totalissue;    
-    // how much was raised
+    // the total amount to be issued
+    uint256 public maxissue;    
+    // how much was deposited
     uint256 public totaldeposited;
     // how much was issued
     uint256 public totalissued;
     // how much was redeemed
     uint256 public totalredeem;
+    // how much was withdrawn 
+    uint256 public totalwithdrawn;
     // start of the sale
     uint256 public startTime;
     // total duration
     uint256 public duration;
     // end of the sale    
     uint256 public endTime;
+    // length of grace period
+    uint256 public graceDuration;
+    // The delay required between investment removal
+    uint256 public investRemovalDelay;    
     // sale has started
     bool public saleEnabled;
     // redeem is possible
@@ -47,12 +53,12 @@ contract FairStagePool is Ownable {
     // number of people who invested
     uint256 public numInvested = 0;
 
+    uint256 public capInvestor;
+
     uint256 public firstPrice;
     uint256 public slope;
     uint256 public priceQuote;
 
-    uint256 public currentPrice;
-    
     event SaleEnabled(bool enabled, uint256 time);
     event RedeemEnabled(bool enabled, uint256 time);
     event Invest(address investor, uint256 amount);
@@ -64,26 +70,29 @@ contract FairStagePool is Ownable {
     }
 
     mapping(address => InvestorInfo) public investorInfoMap;
+    address [] public investorList;
     
     constructor(
         address _investToken,
+        address _nrtAddress,
         uint256 _startTime,
         uint256 _duration, 
-        uint256 _totalissue,
+        uint256 _maxissue,
         uint256 _minInvest,
+        uint256 _capInvestor,
         address _treasury
     ) {
-        //TODO
-        
         investToken = _investToken;
         startTime = _startTime;
         duration = _duration;
-        totalissue = _totalissue;
+        maxissue = _maxissue;
         mininvest = _minInvest; 
         treasury = _treasury;
+        capInvestor = _capInvestor;
         require(duration < 7 days, "duration too long");
         endTime = startTime + duration;
-        nrt = new NRT("aMAG", 9);
+        //NRT at address
+        nrt = NRT(_nrtAddress);
         redeemEnabled = false;
         saleEnabled = false;
         //firstPrice = _firstPrice;
@@ -102,6 +111,8 @@ contract FairStagePool is Ownable {
 
         InvestorInfo storage investor = investorInfoMap[msg.sender];
 
+        require(investor.amountDeposited + investAmount <= capInvestor, "Maximum individual deposit reached");
+
         require(
             ERC20(investToken).transferFrom(
                 msg.sender,
@@ -114,6 +125,7 @@ contract FairStagePool is Ownable {
         totaldeposited += investAmount;
         if (investor.amountDeposited == 0){
             numInvested += 1;
+            investorList.push(msg.sender);
         }
         investor.amountDeposited += investAmount;
        
@@ -121,49 +133,59 @@ contract FairStagePool is Ownable {
     }
 
     //TODO    
-    function withdraw(uint256 investAmount) public {
-
-        //         //Two checks of funds to prevent over widrawal
-        //         require(amountToRemove <= investor.totalInvested, "Cannot Remove more than invested");
-        //         require(investor.totalInvested - amountToRemove >= 0, "Cannot Remove more than invested");
+    function withdraw(uint256 withdrawAmount) public {
 
         // require(block.timestamp < launchEndTime, "Sale and Grace period has ended");
 
         //Make sure they can't withdraw too often.
-        //require(block.timestamp > investor.lastRemovalTime + investRemovalDelay, "Removing investment too often");  
+        //require(block.timestamp > investor.lastRemovalTime + investRemovalDelay, "Removing deposit too often");  
 
         InvestorInfo storage investor = investorInfoMap[msg.sender];
-        require( ERC20(investToken).transfer(address(this),investor.amountDeposited),
+
+        // checks of funds to prevent over withdrawal
+        require(withdrawAmount <= investor.amountDeposited, "Cannot withdraw more than deposited");
+
+        require( ERC20(investToken).transfer(address(this), withdrawAmount),
             "transfer failed"
         );
     }
 
     //TODO
-    function finalize() public {
+    function finalizeSale() public onlyOwner {
+
+        //require ended
+        require(block.timestamp <= endTime, "not ended yet");
+        //         require(block.timestamp > launchEndTime, "Sale and Grace period has not ended");        
 
         // finalize price and 
         // for all investors issue NRT
         uint256 price = IndicativePrice();
 
-        InvestorInfo storage investor = investorInfoMap[msg.sender];
+        // calculate total to be issued
+        //uint256 tobeIssued = 
 
-        uint256 issueAmount = investor.amountDeposited * priceQuote / (price * 10 ** launchDecimalsDif);
-        require(totalissued + issueAmount <= totalissue, "over total issue cap");
+        //TODO handle case where less than 3m will be issued?
 
-        nrt.issue(msg.sender, issueAmount);
-        totalissued += issueAmount;
+        for (uint i=0; i < investorList.length; i++) {
+            uint256 issueAmount = investor.amountDeposited * priceQuote / (price * 10 ** launchDecimalsDif);
+            //require(totalissued + issueAmount <= maxissue, "over total issue cap");
 
-        //         require(saleEnabled, "Sale is not enabled yet");
-        //         require(block.timestamp >= launchStartTime, "Sale is not enabled yet");
-        //         require(block.timestamp > launchEndTime, "Sale and Grace period has not ended");
-        //         require(block.timestamp >= claimTime, "Time to claim has not arrived");
+            nrt.issue(msg.sender, issueAmount);
+            totalissued += issueAmount;
+        }
 
     }
 
     //TODO
     function IndicativePrice() public view returns (uint256) {
         
-        return firstPrice + slope * totaldeposited/totalissue;
+        //uint256 xprice = firstPrice + slope * totaldeposited / (maxissue * 10 ** 7);
+        uint256 xprice = slope * totaldeposited / (maxissue * 10 ** 7);
+        if (xprice > 80){
+            return xprice;
+        } else {
+            return 80;
+        }
         //return startingPrice + (totaldeposited / 10 ** investableDecimals) / maxDeposit; 
     }
 

@@ -3,6 +3,17 @@ pragma solidity 0.8.5;
 
 import "OpenZeppelin/openzeppelin-contracts@4.3.0/contracts/access/Ownable.sol";
 
+// interface INRT{
+  
+//     function issue(address account, uint256 amount) public onlyOwner;
+//     function redeem(address account, uint256 amount) public onlyOwner;
+//     function balanceOf(address account) public view returns (uint256);
+//     function symbol() public view returns (string memory);
+//     function decimals() public view returns (uint256);
+//     function issuedSupply() public view returns (uint256);
+//     function outstandingSupply() public view returns (uint256);
+// }
+
 //NRT is like a private stock
 //can only be traded with the issuer who remains in control of the market
 //until he opens the redemption window

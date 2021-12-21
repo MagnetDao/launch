@@ -8,6 +8,6 @@ contract MockToken is ERC20 {
      * @dev Constructor that gives msg.sender all of existing tokens.
      */
     constructor() ERC20("Token", "TK") {
-        _mint(msg.sender, 1000000 * 10**18);
+        _mint(msg.sender, 100000000 * 10**18);
     }
 }
