@@ -6,10 +6,12 @@ import "OpenZeppelin/openzeppelin-contracts@4.3.0/contracts/token/ERC20/ERC20.so
 import "OpenZeppelin/openzeppelin-contracts@4.3.0/contracts/access/Ownable.sol";
 
 // *********************************
-// Market Launch pool
+// Fair Price Launch Contract, 2nd stage 
+// Every gets the same price in the end
+// Users can redeem a non-transferable token after the sale
 // *********************************
 
-contract MarketPool is Ownable {
+contract FairStagePool is Ownable {
     
     // the token address the cash is raised in
     // assume decimals is 18
@@ -21,9 +23,7 @@ contract MarketPool is Ownable {
     // the certificate
     NRT public nrt;
     // the total amount in stables to be issued
-    uint256 public totalissueCap;
-    // the total amount in stables to be issued
-    uint256 public totalraiseCap;
+    uint256 public totalissue;    
     // how much was raised
     uint256 public totaldeposited;
     // how much was issued
@@ -47,10 +47,10 @@ contract MarketPool is Ownable {
     // number of people who invested
     uint256 public numInvested = 0;
 
-    //TODO slope
     uint256 public firstPrice;
     uint256 public slope;
-    
+    uint256 public priceQuote;
+
     uint256 public currentPrice;
     
     event SaleEnabled(bool enabled, uint256 time);
@@ -59,7 +59,7 @@ contract MarketPool is Ownable {
     event Redeem(address investor, uint256 amount);
 
     struct InvestorInfo {
-        uint256 amountInvested; // Amount deposited by user
+        uint256 amountDeposited; // Amount deposited by user
         bool claimed; // has claimed MAG
     }
 
@@ -69,12 +69,8 @@ contract MarketPool is Ownable {
         address _investToken,
         uint256 _startTime,
         uint256 _duration, 
-        uint256 _epochTime,    
-        uint256 _totalissueCap,
-        uint256 _totalraiseCap,
+        uint256 _totalissue,
         uint256 _minInvest,
-        uint256 _firstPrice,
-        uint256 _slope,
         address _treasury
     ) {
         //TODO
@@ -82,8 +78,7 @@ contract MarketPool is Ownable {
         investToken = _investToken;
         startTime = _startTime;
         duration = _duration;
-        totalissueCap = _totalissueCap;
-        totalraiseCap = _totalraiseCap;
+        totalissue = _totalissue;
         mininvest = _minInvest; 
         treasury = _treasury;
         require(duration < 7 days, "duration too long");
@@ -91,13 +86,15 @@ contract MarketPool is Ownable {
         nrt = new NRT("aMAG", 9);
         redeemEnabled = false;
         saleEnabled = false;
-        firstPrice = _firstPrice;
-        slope = _slope;
-        uint256 priceQuote = 100;
+        //firstPrice = _firstPrice;
+        //slope = _slope;
+        firstPrice = 80;
+        slope = 1;
+        priceQuote = 100;
     }
     
     
-    // invest up to current cap
+    // deposit amount into the contract
     function deposit(uint256 investAmount) public {
         require(block.timestamp >= startTime, "not started yet");
         require(saleEnabled, "not enabled yet");        
@@ -114,14 +111,11 @@ contract MarketPool is Ownable {
             "transfer failed"
         );
 
-        //MAG decimals = 9, MIM decimals = 18        
-        
         totaldeposited += investAmount;
-        if (investor.amountInvested == 0){
+        if (investor.amountDeposited == 0){
             numInvested += 1;
         }
-        investor.amountInvested += investAmount;
-
+        investor.amountDeposited += investAmount;
        
         emit Invest(msg.sender, investAmount);
     }
@@ -139,7 +133,7 @@ contract MarketPool is Ownable {
         //require(block.timestamp > investor.lastRemovalTime + investRemovalDelay, "Removing investment too often");  
 
         InvestorInfo storage investor = investorInfoMap[msg.sender];
-        require( ERC20(investToken).transfer(address(this),investor.amountInvested),
+        require( ERC20(investToken).transfer(address(this),investor.amountDeposited),
             "transfer failed"
         );
     }
@@ -149,12 +143,12 @@ contract MarketPool is Ownable {
 
         // finalize price and 
         // for all investors issue NRT
-        uint256 price = FinalPrice();
+        uint256 price = IndicativePrice();
 
         InvestorInfo storage investor = investorInfoMap[msg.sender];
 
-        uint256 issueAmount = investor.amountInvested * priceQuote / (price * 10 ** launchDecimalsDif);
-        require(totalissued + issueAmount <= totalissueCap, "over total issue cap");
+        uint256 issueAmount = investor.amountDeposited * priceQuote / (price * 10 ** launchDecimalsDif);
+        require(totalissued + issueAmount <= totalissue, "over total issue cap");
 
         nrt.issue(msg.sender, issueAmount);
         totalissued += issueAmount;
@@ -167,8 +161,9 @@ contract MarketPool is Ownable {
     }
 
     //TODO
-    function FinalPrice() public view returns (uint256) {
-        return firstPrice + slope * totaldeposited/totalraiseCap;
+    function IndicativePrice() public view returns (uint256) {
+        
+        return firstPrice + slope * totaldeposited/totalissue;
         //return startingPrice + (totaldeposited / 10 ** investableDecimals) / maxDeposit; 
     }
 

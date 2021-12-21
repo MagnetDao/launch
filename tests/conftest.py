@@ -40,20 +40,37 @@ def launchpoolfair(FairLaunchPool, token, accounts):
     return FairLaunchPool.deploy(_investToken, _startTime, _duration, _epochTime, _cap, _totalraisecap, mini, _treasury, {"from": accounts[0]})
 
 @pytest.fixture(scope="module")
-def launchpoolmarket(MarketPool, token, accounts):
+def launchpoolstage(FairStagePool, token, accounts):
     _investToken = token.address
     _startTime = chain.time()    
     _duration = 60*60*24*5
-    _epochTime = 60*60*8
     decimals = 18
-    f = 10 ** decimals
-    _cap = 500 * f    
-    _totalraisecap = 1500000 * f
-    _totalissueCap = 3000000 * f
+    f = 10 ** decimals    
+    _totalissue = 3 * 10 ** 6 * 10 ** 9
     #issuecap = 2000000 * f
     _treasury = accounts[0] 
     mini = 50 * 10 ** 18
     # price = 75
     # priceQuote = 100
 
-    return MarketPool.deploy(_investToken, _startTime, _duration, _epochTime, _cap, _totalissueCap, _totalraisecap, mini, _treasury, {"from": accounts[0]})
+    return FairStagePool.deploy(_investToken, _startTime, _duration, _totalissue, mini, _treasury, {"from": accounts[0]})
+
+
+# @pytest.fixture(scope="module")
+# def launchpoolmarket(MarketPool, token, accounts):
+#     _investToken = token.address
+#     _startTime = chain.time()    
+#     _duration = 60*60*24*5
+#     _epochTime = 60*60*8
+#     decimals = 18
+#     f = 10 ** decimals
+#     _cap = 500 * f    
+#     _totalraisecap = 1500000 * f
+#     _totalissueCap = 3000000 * f
+#     #issuecap = 2000000 * f
+#     _treasury = accounts[0] 
+#     mini = 50 * 10 ** 18
+#     # price = 75
+#     # priceQuote = 100
+
+#     return MarketPool.deploy(_investToken, _startTime, _duration, _epochTime, _cap, _totalissueCap, _totalraisecap, mini, _treasury, {"from": accounts[0]})

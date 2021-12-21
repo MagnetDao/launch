@@ -4,7 +4,7 @@ import pytest
 import brownie
 from brownie import accounts, chain
 
-def test_basic(launchpoolfair, token, launchtoken, nrt, accounts):
+def test_basic(launchpoolstage, token, launchtoken, nrt, accounts):
     assert token.balanceOf(accounts[0].address) == 1000000000000000000000000
 
     token.transfer(accounts[1], 500000000000000000000000)
@@ -13,11 +13,8 @@ def test_basic(launchpoolfair, token, launchtoken, nrt, accounts):
 
     decimals = 18
     f = 10 ** decimals
-    assert launchpoolfair.totalraised() == 0
-    assert launchpoolfair.epochTime() == 60*60*8
-    assert launchpoolfair.initialCap() == 500 * f
-    assert launchpoolfair.totalraiseCap() == 1500000 * f
-    assert launchpoolfair.duration() == 60*60*24*5
+    assert launchpoolstage.totaldeposited() == 0
+    assert launchpoolstage.totalissue() == 3 * 10**6 * 10 ** 9
     
     # assert launchpoolfair.currentCap() == 500 * f
     # assert launchpoolfair.currentEpoch() == 0

@@ -8,7 +8,7 @@ project_structure:
     tests: tests
 
 networks:
-    default: avax
+    default: development
     development:
         host: https://127.0.0.1:8545
         
