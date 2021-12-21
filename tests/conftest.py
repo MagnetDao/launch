@@ -53,10 +53,11 @@ def fairstagepool(FairStagePool, NRT, token, accounts):
     # price = 75
     # priceQuote = 100
     _capInvestor = 50000 * f
+    _depositCap = 6 * 10 ** 6 * 10 ** 18
 
-    _nrtAddress = NRT.deploy("aMAG", 9, {"from": accounts[0]}).address
+    #_nrtAddress = NRT.deploy("aMAG", 9, {"from": accounts[0]}).address
 
-    return FairStagePool.deploy(_investToken, _nrtAddress, _startTime, _duration, _totalissue, mini, _capInvestor, _treasury, {"from": accounts[0]})
+    return FairStagePool.deploy(_investToken, _startTime, _duration, _totalissue, mini, _capInvestor, _depositCap,  _treasury, {"from": accounts[0]})
 
 
 # @pytest.fixture(scope="module")

@@ -39,6 +39,7 @@ contract Redeemer is Ownable {
         //require(block.timestamp > endTime, "not redeemable yet");
         uint256 redeemAmount = nrt.balanceOf(msg.sender) / redeemRatio;
         require(redeemAmount > 0, "no amount issued");
+        nrt.redeem(msg.sender, redeemAmount);
         require(
             ERC20(launchToken).transfer(
                 msg.sender,
@@ -46,8 +47,6 @@ contract Redeemer is Ownable {
             ),
             "transfer failed"
         );
-
-        nrt.redeem(msg.sender, redeemAmount);
 
         totalredeem += redeemAmount;        
         emit Redeem(msg.sender, redeemAmount);

@@ -40,12 +40,17 @@ def test_basic(fairstagepool, token, launchtoken, nrt, accounts):
         token.approve(fairstagepool.address, 100 * f, {"from": accounts[0]})
         fairstagepool.deposit(100 * f, {"from": accounts[0]})
 
+
+    assert fairstagepool.investorList(0) == accounts[0]
+
 def test_several(fairstagepool, token, launchtoken, nrt, accounts):
     # token.transfer(accounts[1], 500000000000000000000000)
     # token.transfer(accounts[2], 100000000000000000000000)
     # token.transfer(accounts[3], 100000000000000000000000)
 
     deployer_params = {"from" : accounts[0]}
+
+    assert fairstagepool.owner() == accounts[0]    
 
     fairstagepool.enableSale()
 
@@ -64,5 +69,19 @@ def test_several(fairstagepool, token, launchtoken, nrt, accounts):
 
     assert fairstagepool.totaldeposited() == 100 * 50000 * f
 
-    #TODO fix
     assert fairstagepool.IndicativePrice() == 166
+
+    toend = fairstagepool.endTime() - chain.time()
+    chain.sleep(toend)
+    chain.mine()
+
+    fairstagepool.finalizeSale({"from": accounts[0]})
+
+    # accounts.add()
+    
+    # token.transfer(accounts[-1], 50000 * f, deployer_params)
+
+    # token.approve(fairstagepool.address, 50000 * f, {"from": accounts[-1]})
+    # fairstagepool.deposit(50000 * f, {"from": accounts[-1]})
+
+    # assert fairstagepool.IndicativePrice() == 168

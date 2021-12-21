@@ -44,10 +44,9 @@ contract FairStagePool is Ownable {
     uint256 public mininvest;
     // MAG decimals = 9, MIM decimals = 18
     uint256 public launchDecimalsDif = 9; 
-    // number of people who invested
-    uint256 public numInvested = 0;
     // cap per address
     uint256 public capInvestor;
+    uint256 public depositCap;
 
     uint256 public firstPrice;
     uint256 public slope;
@@ -68,13 +67,13 @@ contract FairStagePool is Ownable {
     address [] public investorList;
     
     constructor(
-        address _investToken,
-        address _nrtAddress,
+        address _investToken,        
         uint256 _startTime,
         uint256 _duration, 
         uint256 _maxissue,
         uint256 _minInvest,
         uint256 _capInvestor,
+        uint256 _depositCap,
         address _dao
     ) {
         investToken = _investToken;
@@ -82,12 +81,12 @@ contract FairStagePool is Ownable {
         duration = _duration;
         maxissue = _maxissue;
         mininvest = _minInvest; 
+        depositCap = _depositCap;
         dao = _dao;
         capInvestor = _capInvestor;
         require(duration < 7 days, "duration too long");
-        endTime = startTime + duration;
-        //NRT at address
-        nrt = NRT(_nrtAddress);        
+        endTime = startTime + duration;                
+        nrt = new NRT("bMAG", 9);
         saleEnabled = false;
         //firstPrice = _firstPrice;
         //slope = _slope;
@@ -106,6 +105,7 @@ contract FairStagePool is Ownable {
         InvestorInfo storage investor = investorInfoMap[msg.sender];
 
         require(investor.amountDeposited + investAmount <= capInvestor, "Maximum individual deposit reached");
+        require(totaldeposited + investAmount <= depositCap, "Maximum deposit cap reached");
 
         require(
             ERC20(investToken).transferFrom(
@@ -117,8 +117,7 @@ contract FairStagePool is Ownable {
         );
 
         totaldeposited += investAmount;
-        if (investor.amountDeposited == 0){
-            numInvested += 1;
+        if (investor.amountDeposited == 0){            
             investorList.push(msg.sender);
         }
         investor.amountDeposited += investAmount;
@@ -143,6 +142,8 @@ contract FairStagePool is Ownable {
             "transfer failed"
         );
 
+        investor.amountDeposited -= withdrawAmount;
+
         emit Withdraw(msg.sender, withdrawAmount);
     }
 
@@ -156,7 +157,6 @@ contract FairStagePool is Ownable {
         // finalize price and 
         // for all investors issue NRT
         uint256 price = IndicativePrice();
-
 
         // calculate total to be issued
         //uint256 tobeIssued = 

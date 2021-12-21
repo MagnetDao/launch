@@ -5,7 +5,7 @@ import brownie
 from brownie import accounts, chain
 
 def test_basic(launchpoolfair, token, launchtoken, nrt, accounts):
-    assert token.balanceOf(accounts[0].address) == 1000000000000000000000000
+    assert token.balanceOf(accounts[0].address) == 100000000000000000000000000
 
     launchpoolfair.addMultipleWhitelist([accounts[0],accounts[1]])
     # launchpoolfair.addWhitelist(accounts[0])
@@ -32,7 +32,7 @@ def test_basic(launchpoolfair, token, launchtoken, nrt, accounts):
     assert launchpoolfair.saleEnabled()
 
     #assert token.balanceOf(launchpoolfair.address) == 9
-    assert token.balanceOf(accounts[0].address) == 300000000000000000000000
+    assert token.balanceOf(accounts[0].address) == 99300000000000000000000000
 
     token.approve(launchpoolfair.address, 500 * f, {"from": accounts[0]})
     b1 = token.balanceOf(accounts[0].address)
@@ -131,7 +131,7 @@ def test_basic(launchpoolfair, token, launchtoken, nrt, accounts):
     #launchpoolfair.withdrawTreasury(b)
 
     launchpoolfair.setLaunchToken(launchtoken.address)
-    assert launchtoken.balanceOf(accounts[0]) == 1000000000000000000000000
+    assert launchtoken.balanceOf(accounts[0]) == 100000000000000000000000000
     launchtoken.approve(launchpoolfair.address, 10000 * 10**18, {"from": accounts[0]})
     launchpoolfair.depositLaunchtoken(10000 * 10**18)
 
