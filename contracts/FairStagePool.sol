@@ -15,11 +15,9 @@ contract FairStagePool is Ownable {
     
     // the token address the cash is raised in
     // assume decimals is 18
-    address public investToken;
-    // the token to be launched
-    address public launchToken;
-    // proceeds go to treasury, multisig
-    address public treasury;
+    address public investToken;    
+    // proceeds go to dao
+    address public dao;
     // the certificate
     NRT public nrt;
     // the total amount to be issued
@@ -28,8 +26,6 @@ contract FairStagePool is Ownable {
     uint256 public totaldeposited;
     // how much was issued
     uint256 public totalissued;
-    // how much was redeemed
-    uint256 public totalredeem;
     // how much was withdrawn 
     uint256 public totalwithdrawn;
     // start of the sale
@@ -44,15 +40,13 @@ contract FairStagePool is Ownable {
     uint256 public investRemovalDelay;    
     // sale has started
     bool public saleEnabled;
-    // redeem is possible
-    bool public redeemEnabled;
     // minimum amount
     uint256 public mininvest;
     // MAG decimals = 9, MIM decimals = 18
     uint256 public launchDecimalsDif = 9; 
     // number of people who invested
     uint256 public numInvested = 0;
-
+    // cap per address
     uint256 public capInvestor;
 
     uint256 public firstPrice;
@@ -60,9 +54,10 @@ contract FairStagePool is Ownable {
     uint256 public priceQuote;
 
     event SaleEnabled(bool enabled, uint256 time);
-    event RedeemEnabled(bool enabled, uint256 time);
-    event Invest(address investor, uint256 amount);
-    event Redeem(address investor, uint256 amount);
+    
+    event Deposit(address investor, uint256 amount);
+    event Withdraw(address investor, uint256 amount);
+    
 
     struct InvestorInfo {
         uint256 amountDeposited; // Amount deposited by user
@@ -80,20 +75,19 @@ contract FairStagePool is Ownable {
         uint256 _maxissue,
         uint256 _minInvest,
         uint256 _capInvestor,
-        address _treasury
+        address _dao
     ) {
         investToken = _investToken;
         startTime = _startTime;
         duration = _duration;
         maxissue = _maxissue;
         mininvest = _minInvest; 
-        treasury = _treasury;
+        dao = _dao;
         capInvestor = _capInvestor;
         require(duration < 7 days, "duration too long");
         endTime = startTime + duration;
         //NRT at address
-        nrt = NRT(_nrtAddress);
-        redeemEnabled = false;
+        nrt = NRT(_nrtAddress);        
         saleEnabled = false;
         //firstPrice = _firstPrice;
         //slope = _slope;
@@ -129,7 +123,7 @@ contract FairStagePool is Ownable {
         }
         investor.amountDeposited += investAmount;
        
-        emit Invest(msg.sender, investAmount);
+        emit Deposit(msg.sender, investAmount);
     }
 
     //TODO    
@@ -148,6 +142,8 @@ contract FairStagePool is Ownable {
         require( ERC20(investToken).transfer(address(this), withdrawAmount),
             "transfer failed"
         );
+
+        emit Withdraw(msg.sender, withdrawAmount);
     }
 
     //TODO
@@ -161,12 +157,15 @@ contract FairStagePool is Ownable {
         // for all investors issue NRT
         uint256 price = IndicativePrice();
 
+
         // calculate total to be issued
         //uint256 tobeIssued = 
 
         //TODO handle case where less than 3m will be issued?
 
         for (uint i=0; i < investorList.length; i++) {
+            InvestorInfo storage investor = investorInfoMap[investorList[i]];
+            //TODO double check precision
             uint256 issueAmount = investor.amountDeposited * priceQuote / (price * 10 ** launchDecimalsDif);
             //require(totalissued + issueAmount <= maxissue, "over total issue cap");
 
@@ -180,7 +179,7 @@ contract FairStagePool is Ownable {
     function IndicativePrice() public view returns (uint256) {
         
         //uint256 xprice = firstPrice + slope * totaldeposited / (maxissue * 10 ** 7);
-        uint256 xprice = slope * totaldeposited / (maxissue * 10 ** 7);
+        uint256 xprice = priceQuote * slope * totaldeposited / (maxissue * 10 ** 9);
         if (xprice > 80){
             return xprice;
         } else {
@@ -189,56 +188,11 @@ contract FairStagePool is Ownable {
         //return startingPrice + (totaldeposited / 10 ** investableDecimals) / maxDeposit; 
     }
 
-    // redeem all tokens
-    function redeem() public {        
-        require(redeemEnabled, "redeem not enabled");
-        //require(block.timestamp > endTime, "not redeemable yet");
-        uint256 redeemAmount = nrt.balanceOf(msg.sender);
-        require(redeemAmount > 0, "no amount issued");
-        InvestorInfo storage investor = investorInfoMap[msg.sender];
-        require(!investor.claimed, "already claimed");
-        require(
-            ERC20(launchToken).transfer(
-                msg.sender,
-                redeemAmount
-            ),
-            "transfer failed"
-        );
-
-        nrt.redeem(msg.sender, redeemAmount);
-
-        totalredeem += redeemAmount;        
-        emit Redeem(msg.sender, redeemAmount);
-        investor.claimed = true;
-    }
-
-    // -- admin functions --
-
-    // define the launch token to be redeemed
-    function setLaunchToken(address _launchToken) public onlyOwner {
-        launchToken = _launchToken;
-    }
-
-    function depositLaunchtoken(uint256 amount) public onlyOwner {
-        require(
-            ERC20(launchToken).transferFrom(msg.sender, address(this), amount),
-            "transfer failed"
-        );
-    }
-
-    // withdraw in case some tokens were not redeemed
-    function withdrawLaunchtoken(uint256 amount) public onlyOwner {
-        require(
-            ERC20(launchToken).transfer(msg.sender, amount),
-            "transfer failed"
-        );
-    }
-
-    // withdraw funds to treasury
-    function withdrawTreasury(uint256 amount) public onlyOwner {
+    // withdraw funds to dao
+    function withdrawDao(uint256 amount) public onlyOwner {
         //uint256 b = ERC20(investToken).balanceOf(address(this));
         require(
-            ERC20(investToken).transfer(treasury, amount),
+            ERC20(investToken).transfer(dao, amount),
             "transfer failed"
         );
     }
@@ -247,10 +201,5 @@ contract FairStagePool is Ownable {
         saleEnabled = true;
         emit SaleEnabled(true, block.timestamp);
     }
-
-    function enableRedeem() public onlyOwner { 
-        require(launchToken != address(0), "launch token not set");
-        redeemEnabled = true;
-        emit RedeemEnabled(true, block.timestamp);
-    }
+    
 }
