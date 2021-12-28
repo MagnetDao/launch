@@ -1,27 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.8.5;
+pragma solidity 0.7.5;
 
-import "OpenZeppelin/openzeppelin-contracts@4.3.0/contracts/access/Ownable.sol";
-
-// interface INRT{
-  
-//     function issue(address account, uint256 amount) public onlyOwner;
-//     function redeem(address account, uint256 amount) public onlyOwner;
-//     function balanceOf(address account) public view returns (uint256);
-//     function symbol() public view returns (string memory);
-//     function decimals() public view returns (uint256);
-//     function issuedSupply() public view returns (uint256);
-//     function outstandingSupply() public view returns (uint256);
-// }
+import "../lib/OwnableMulti.sol";
+import "../lib/SafeMath.sol";
 
 //NRT is like a private stock
 //can only be traded with the issuer who remains in control of the market
 //until he opens the redemption window
-contract NRT is Ownable {
+contract NRT is OwnableMulti {
     uint256 private _issuedSupply;
     uint256 private _outstandingSupply;
     uint256 private _decimals;
     string private _symbol;
+
+    using SafeMath for uint256;
 
     mapping(address => uint256) private _balances;
 
@@ -39,9 +31,9 @@ contract NRT is Ownable {
     function issue(address account, uint256 amount) public onlyOwner {
         require(account != address(0), "zero address");
 
-        _issuedSupply += amount;
-        _outstandingSupply += amount;
-        _balances[account] += amount;
+        _issuedSupply = _issuedSupply.add(amount);
+        _outstandingSupply = _outstandingSupply.add(amount);
+        _balances[account] = _balances[account].add(amount);
 
         emit Issued(account, amount);
     }
@@ -51,8 +43,8 @@ contract NRT is Ownable {
         require(account != address(0), "zero address");
         require(_balances[account] >= amount, "Insufficent balance");
 
-        _balances[account] -= amount;
-        _outstandingSupply -= amount;
+        _balances[account] = _balances[account].sub(amount);
+        _outstandingSupply = _outstandingSupply.sub(amount);
 
         emit Redeemed(account, amount);
     }
